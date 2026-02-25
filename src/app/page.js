@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
+import supabase from "@/lib/supabaseClient";
 
 export default function Home() {
 
   useEffect(() => {
 
+    // expose Supabase globally
+    window.supabase = supabase;
+
+    // load scripts
     const scripts = [
-      "/js/core/data.js",
+      "/js/core/supabaseData.js",
       "/js/core/dashboard.js",
       "/js/features/budgets/budgets.js",
       "/js/features/debts/debts.js",

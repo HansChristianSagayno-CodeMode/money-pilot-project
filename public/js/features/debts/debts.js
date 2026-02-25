@@ -69,6 +69,28 @@ function deleteItem(type, id) {
 
         renderDebts();
     }
+
+}
+
+async function loadDebts() {
+
+    const { data: debts, error } =
+        await window.supabase
+            .from('debts')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+    if (error) {
+
+        console.error(error);
+
+        return;
+    }
+
+    // replace local data
+    data.debts = debts;
+
+    renderDebts();
 }
 function renderDebts() {
 
@@ -110,7 +132,7 @@ function renderDebts() {
                                  color:var(--danger);
                                  border:none;">
 
-                        Due ${formatDate(d.date)}
+                        Due ${formatDate(d.due_date)}
 
                     </span>
 
@@ -132,32 +154,56 @@ function renderDebts() {
 
         `).join('');
 }
-
-function addDebt(e) {
+async function addDebt(e) {
 
     e.preventDefault();
 
-    data.debts.push({
+    const name =
+        document.getElementById('debtName').value;
 
-        id: Date.now(),
-
-        name: document.getElementById('debtName').value,
-
-        amount: parseFloat(
+    const amount =
+        parseFloat(
             document.getElementById('debtAmount').value
-        ),
+        );
 
-        date: document.getElementById('debtDate').value
-    });
+    const dueDate =
+        document.getElementById('debtDate').value;
 
-    renderDebts();
+    const newDebt = {
+        name: name,
+        amount: amount,
+        interest: 0,
+        due_date: dueDate
+    };
+
+    const { data, error } =
+        await window.supabase
+            .from('debts')
+            .insert([newDebt])
+            .select();
+
+    if (error) {
+
+        console.error(error);
+
+        alert("Failed to save debt");
+
+        return;
+    }
+
+    await loadDebts();
 
     closeModal('debtModal');
 }
+
+
+
+
+
 document.addEventListener(
     'DOMContentLoaded',
     () => {
-        renderDebts();
+        loadDebts();
     }
 );
 
