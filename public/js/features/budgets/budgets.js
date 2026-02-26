@@ -1,8 +1,10 @@
 
 
+
 function renderAll() {
     renderBudgets();
 }
+
 
 function formatPHP(num) {
     return '₱' + parseFloat(num).toLocaleString('en-PH', { minimumFractionDigits: 2 });
@@ -26,28 +28,53 @@ function closeModal(id) {
     document.getElementById(id).style.display = 'none';
 }
 
-function deleteItem(type, id) {
+async function deleteItem(type, id)  {
     if (confirm('Delete this item?')) {
         if (type === 'planner') {
             data.planner.items = data.planner.items.filter(i => i.id !== id);
         } else {
-            data[type] = data[type].filter(item => item.id !== id);
+            if (type === 'budgets') {
+
+                const { error } =
+                    await window.supabase
+                        .from("budgets")
+                        .delete()
+                        .eq("id", id);
+            
+                if (error) {
+            
+                    console.error(error);
+            
+                    return;
+                }
+            
+                await loadBudgets();
+            
+                return;
+            }
         }
 
         renderAll();
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    renderBudgets();
-});
+(async function initBudgets() {
+
+    while (!window.supabase || !window.appData) {
+
+        await new Promise(r => setTimeout(r, 50));
+    }
+
+    await loadBudgets();
+
+})();
 
 function renderBudgets() {
     const container = document.getElementById('budget-container');
 
     if (!container) return;
 
-    if (data.budgets.length === 0) {
+    if (window.appData.budgets.length === 0) {
         container.innerHTML = getEmptyState(
             'No budgets created',
             'openModal(\'budgetModal\')',
@@ -61,17 +88,20 @@ function renderBudgets() {
 
     container.style.display = 'grid';
 
-    container.innerHTML = data.budgets.map(b => {
+    container.innerHTML = window.appData.budgets.map(b => {
 
-        const spent = data.records
+        const spent = window.appData.records
+        ? window.appData.records
             .filter(r =>
                 r.type === 'expense' &&
                 (b.category === 'All' || r.category === b.category)
             )
-            .reduce((sum, r) => sum + r.amount, 0);
-
-        const pct = Math.min(100, (spent / b.limit) * 100);
-
+            .reduce((sum, r) => sum + r.amount, 0)
+        : 0;
+    
+    const pct = b.limit_amount > 0
+        ? Math.min(100, (spent / b.limit_amount) * 100)
+        : 0;
         return `
             <div class="card">
 
@@ -92,7 +122,7 @@ function renderBudgets() {
                             height:100%;
                             width:${pct}%;
 
-                            background:${spent > b.limit
+                   background:${spent > b.limit_amount
                                 ? 'var(--danger)'
                                 : 'var(--primary)'
                             };
@@ -102,14 +132,14 @@ function renderBudgets() {
 
                     <div style="font-size:0.8rem; margin-top:5px; display:flex; justify-content:space-between;">
                         <span>${formatPHP(spent)} spent</span>
-                        <span>${formatPHP(b.limit)}</span>
+                        <span>${formatPHP(b.limit_amount)}</span>
                     </div>
 
                 </div>
 
                 <button
                     class="btn-text"
-                    onclick="deleteItem('budgets', ${b.id})"
+                    onclick="deleteItem('budgets', '${b.id}')"
                     style="color:var(--danger); font-size:0.8rem;"
                 >
                     Remove
@@ -120,35 +150,43 @@ function renderBudgets() {
     }).join('');
 }
 
-function addBudget(e) {
+async function addBudget(e) {
+    console.log("budgets.js loaded");
 
     e.preventDefault();
 
-    data.budgets.push({
-
-        id: Date.now(),
+    const newBudget = {
 
         name: document.getElementById('budgetName').value,
 
-        limit: parseFloat(
+        limit_amount: parseFloat(
             document.getElementById('budgetLimit').value
         ),
 
-        period: document.getElementById('budgetPeriod').value,
+        category: document.getElementById('budgetCategory').value
+    };
 
-        category: document.getElementById('budgetCategory').value,
+    const { error } =
+        await window.supabase
+            .from("budgets")
+            .insert([newBudget]);
 
-        notify: document.getElementById('budgetNotify').checked
-    });
+    if (error) {
 
-    renderBudgets();
+        console.error(error);
+
+        alert(error.message);
+
+        return;
+    }
+
+    await loadBudgets();
+
+    e.target.reset();   // ← THIS FIXES YOUR ISSUE
 
     closeModal('budgetModal');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    renderAll();
-});
 
 window.onclick = function(e) {
 
@@ -157,3 +195,23 @@ window.onclick = function(e) {
         e.target.style.display = 'none';
     }
 };
+
+async function loadBudgets() {
+
+    const { data, error } =
+        await window.supabase
+            .from("budgets")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+    if (error) {
+
+        console.error(error);
+
+        return;
+    }
+
+    window.appData.budgets = data || [];
+
+    renderBudgets();
+}

@@ -81,14 +81,12 @@ async function loadDebts() {
             .order('created_at', { ascending: false });
 
     if (error) {
-
-        console.error(error);
-
+        console.error("Load debts error:", error);
         return;
     }
 
-    // replace local data
-    data.debts = debts;
+    // store in global appData
+    window.appData.debts = debts || [];
 
     renderDebts();
 }
@@ -99,7 +97,9 @@ function renderDebts() {
 
     if (!container) return;
 
-    if (data.debts.length === 0) {
+    const debts = window.appData.debts || [];
+
+    if (debts.length === 0) {
 
         container.innerHTML =
             getEmptyState(
@@ -109,14 +109,13 @@ function renderDebts() {
             );
 
         container.style.display = 'block';
-
         return;
     }
 
     container.style.display = 'grid';
 
     container.innerHTML =
-        data.debts.map(d => `
+        debts.map(d => `
         
             <div class="card"
                  style="border-left:4px solid var(--danger);">
@@ -144,7 +143,7 @@ function renderDebts() {
 
                 <button class="btn btn-outline"
                         style="font-size:0.8rem; padding:6px;"
-                        onclick="deleteItem('debts', ${d.id})">
+                        onclick="deleteDebt('${d.id}')">
 
                     Paid
 
@@ -154,6 +153,7 @@ function renderDebts() {
 
         `).join('');
 }
+
 async function addDebt(e) {
 
     e.preventDefault();
@@ -197,15 +197,38 @@ async function addDebt(e) {
 }
 
 
+async function deleteDebt(id) {
 
+    if (!confirm("Mark this debt as paid?")) return;
 
+    const { error } =
+        await window.supabase
+            .from('debts')
+            .delete()
+            .eq('id', id);
 
-document.addEventListener(
-    'DOMContentLoaded',
-    () => {
-        loadDebts();
+    if (error) {
+        console.error("Delete error:", error);
+        alert("Failed to delete debt");
+        return;
     }
-);
+
+    await loadDebts();
+}
+
+
+
+async function initializeDebts() {
+
+    while (!window.supabase || !window.appData) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    await loadDebts();
+}
+
+
+initializeDebts();
 
 window.onclick = function(e) {
 

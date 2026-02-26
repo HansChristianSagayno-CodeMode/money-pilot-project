@@ -40,7 +40,7 @@ function closeModal(id) {
     document.getElementById(id).style.display = 'none';
 }
 
-function deleteItem(type, id) {
+async function deleteItem(type, id) {
 
     if (confirm('Delete this item?')) {
 
@@ -51,8 +51,27 @@ function deleteItem(type, id) {
 
         } else {
 
-            data[type] =
-                data[type].filter(item => item.id !== id);
+            if (type === "goals") {
+
+                const { error } =
+                    await window.supabase
+                        .from("goals")
+                        .delete()
+                        .eq("id", id);
+            
+                if (error) {
+            
+                    console.error(error);
+            
+                    alert(error.message);
+            
+                    return;
+                }
+            
+                await loadGoals();
+            
+                return;
+            };
 
         }
 
@@ -67,7 +86,7 @@ function renderGoals() {
 
     if (!container) return;
 
-    if (data.goals.length === 0) {
+    if (window.appData.goals.length === 0) {
 
         container.innerHTML =
             getEmptyState(
@@ -84,27 +103,29 @@ function renderGoals() {
     container.style.display = 'grid';
 
     const income =
-        data.records
+    window.appData.records
+        ? window.appData.records
             .filter(r => r.type === 'income')
-            .reduce((s, r) => s + r.amount, 0);
+            .reduce((s, r) => s + r.amount, 0)
+        : 0;
 
-    const expense =
-        data.records
+const expense =
+    window.appData.records
+        ? window.appData.records
             .filter(r => r.type === 'expense')
-            .reduce((s, r) => s + r.amount, 0);
+            .reduce((s, r) => s + r.amount, 0)
+        : 0;
 
     const savings =
         Math.max(0, income - expense);
 
     container.innerHTML =
-        data.goals.map(g => {
+    window.appData.goals.map(g => {
 
-            const pct =
-                Math.min(
-                    100,
-                    (savings / g.target) * 100
-                );
-
+        const pct =
+        g.target > 0
+            ? Math.min(100, (savings / g.target) * 100)
+            : 0;
             return `
             
                 <div class="card">
@@ -171,7 +192,7 @@ function renderGoals() {
 
                         <i class="fa-solid fa-trash"
                            style="color:#cbd5e1; cursor:pointer;"
-                           onclick="deleteItem('goals', ${g.id})">
+                         onclick="deleteItem('goals', '${g.id}')"
                         </i>
 
                     </div>
@@ -182,18 +203,13 @@ function renderGoals() {
         }).join('');
 }
 
-function addGoal(e) {
+async function addGoal(e) {
 
     e.preventDefault();
 
-    const icon =
-        document.querySelector(
-            'input[name="goalIcon"]:checked'
-        ).value;
+    const icon = "fa-star";
 
-    data.goals.push({
-
-        id: Date.now(),
+    const newGoal = {
 
         name: document.getElementById('goalName').value,
 
@@ -204,12 +220,28 @@ function addGoal(e) {
         date: document.getElementById('goalDate').value,
 
         icon: icon
-    });
+    };
 
-    renderGoals();
+    const { error } =
+        await window.supabase
+            .from("goals")
+            .insert([newGoal]);
+
+    if (error) {
+
+        console.error(error);
+
+        alert(error.message);
+
+        return;
+    }
+
+    await loadGoals();
 
     closeModal('goalModal');
 }
+
+
 
 function fillGoal(name, target) {
 
@@ -279,3 +311,37 @@ window.onclick =
 
             e.target.style.display = 'none';
     };
+
+
+
+    async function loadGoals() {
+
+        const { data, error } =
+            await window.supabase
+                .from("goals")
+                .select("*")
+                .order("created_at", { ascending: false });
+    
+        if (error) {
+    
+            console.error(error);
+    
+            return;
+        }
+    
+        window.appData.goals = data || [];
+    
+        renderGoals();
+    }
+    
+    
+    (async function initGoals() {
+    
+        while (!window.supabase || !window.appData) {
+    
+            await new Promise(r => setTimeout(r, 50));
+        }
+    
+        await loadGoals();
+    
+    })();
