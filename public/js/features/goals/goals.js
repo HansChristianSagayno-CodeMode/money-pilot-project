@@ -80,128 +80,62 @@ async function deleteItem(type, id) {
 }
 
 function renderGoals() {
-
-    const container =
-        document.getElementById('goal-container');
-
+    const container = document.getElementById('goal-container');
     if (!container) return;
 
-    if (window.appData.goals.length === 0) {
-
-        container.innerHTML =
-            getEmptyState(
-                'No goals',
-                'openModal(\'goalModal\')',
-                'Add Goal'
-            );
-
+    if (!window.appData.goals || window.appData.goals.length === 0) {
+        container.innerHTML = getEmptyState('No goals', 'openModal(\'goalModal\')', 'Add Goal');
         container.style.display = 'block';
-
         return;
     }
 
+    // STRICT LAYOUT ENFORCEMENT: Restore exactly to 2-column grid
     container.style.display = 'grid';
+    container.style.gridTemplateColumns = '1fr 1fr';
+    container.style.gap = '24px';
 
-    const income =
-    window.appData.records
-        ? window.appData.records
-            .filter(r => r.type === 'income')
-            .reduce((s, r) => s + r.amount, 0)
+    const income = window.appData.records
+        ? window.appData.records.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0)
         : 0;
 
-const expense =
-    window.appData.records
-        ? window.appData.records
-            .filter(r => r.type === 'expense')
-            .reduce((s, r) => s + r.amount, 0)
+    const expense = window.appData.records
+        ? window.appData.records.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0)
         : 0;
 
-    const savings =
-        Math.max(0, income - expense);
+    const savings = Math.max(0, income - expense);
 
-    container.innerHTML =
-    window.appData.goals.map(g => {
+    container.innerHTML = window.appData.goals.map(g => {
+        const pct = g.target > 0 ? Math.min(100, (savings / g.target) * 100) : 0;
+        
+        return `
+            <div class="card" style="padding: 1.5rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:15px; width:100%;">
 
-        const pct =
-        g.target > 0
-            ? Math.min(100, (savings / g.target) * 100)
-            : 0;
-            return `
-            
-                <div class="card">
-
-                    <div style="display:flex; gap:15px;">
-
-                        <div style="
-                            width:50px;
-                            height:50px;
-
-                            background:var(--primary-light);
-                            color:var(--primary);
-
-                            border-radius:12px;
-
-                            display:flex;
-                            align-items:center;
-                            justify-content:center;
-
-                            font-size:1.5rem;
-                        ">
-
-                            <i class="fa-solid ${g.icon}"></i>
-
-                        </div>
-
-                        <div style="flex:1;">
-
-                            <div style="font-weight:700;">
-                                ${g.name}
-                            </div>
-
-                            <div style="
-                                font-size:0.8rem;
-                                color:var(--text-muted);
-                            ">
-                                ${formatPHP(g.target)}
-                            </div>
-
-                            <div style="
-                                margin-top:10px;
-
-                                height:6px;
-
-                                background:var(--bg-body);
-
-                                border-radius:10px;
-
-                                overflow:hidden;
-                            ">
-
-                                <div style="
-                                    height:100%;
-
-                                    width:${pct}%;
-
-                                    background:var(--success);
-                                ">
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <i class="fa-solid fa-trash"
-                           style="color:#cbd5e1; cursor:pointer;"
-                         onclick="deleteItem('goals', '${g.id}')"
-                        </i>
-
+                    <div style="width:50px; height:50px; background:var(--primary-light); color:var(--primary); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
+                        <i class="fa-solid ${g.icon || 'fa-star'}"></i>
                     </div>
 
-                </div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700; font-size:1rem;">${g.name}</div>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Target: ${formatPHP(g.target)}</div>
+                        
+                        <div style="margin-top:10px; height:8px; background:var(--bg-body); border-radius:10px; overflow:hidden;">
+                            <div style="height:100%; width:${pct}%; background:var(--success); border-radius:10px;"></div>
+                        </div>
+                    </div>
 
-            `;
-        }).join('');
+                    <i class="fa-solid fa-trash"
+                       style="color:#cbd5e1; cursor:pointer; font-size:1.2rem; flex-shrink:0; padding:5px;"
+                       onclick="deleteItem('goals', '${g.id}')">
+                    </i>
+
+                </div>
+            </div>
+        `;
+    }).join('');
 }
+
+
 
 async function addGoal(e) {
 

@@ -31,3 +31,25 @@ window.appData = {
   
     console.log("Supabase data loaded:", window.appData);
   };
+
+  window.appData = {
+
+    budgets: [],
+    debts: [],
+    goals: [],
+    savings: [],
+    records: [],
+  
+    planner: {
+      mainGoal: 50000,
+      period: "Monthly",
+      items: [
+        {
+          id: 1,
+          name: "Standing Desk",
+          cost: 15000
+        }
+      ]
+    }
+  
+  };

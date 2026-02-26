@@ -211,3 +211,22 @@ body {
     transform: translateY(0px);
     box-shadow: 0 3px 8px rgba(16,185,129,0.25);
 }
+
+
+.expense-add-record-btn {
+    margin-top: 12px;
+    padding: 8px 14px;
+    border: 2px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.expense-add-record-btn:hover {
+    background: var(--primary);
+    color: white;
+}
