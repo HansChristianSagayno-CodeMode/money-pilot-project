@@ -184,14 +184,31 @@ export default function Home() {
 
                 <div className="card">
                   <div className="card-header">
-                    <span className="card-title">Items to Buy</span>
-                    <span id="planner-count-badge" className="filter_badge">0 / 3 Items</span>
+                  <span 
+  id="planner-items-header" 
+  className="card-title"
+>
+  Items to Buy 0 / 3 Items
+</span>
+      
                   </div>
                   <div id="planner-items-list"></div>
                   <div className="planner-input-row">
+
                     <input id="new-item-name" placeholder="Item Name" />
                     <input id="new-item-cost" type="number" placeholder="Cost" />
-                    <button className="btn btn-primary" onClick={() => window.addPlannerItem()}>Add Item</button>
+
+                    <button
+  className="btn btn-primary"
+  onClick={() =>
+    window.addPlannerItem(
+      document.getElementById("new-item-name").value,
+      document.getElementById("new-item-cost").value
+    )
+  }
+>
+  Add Item
+</button>
                   </div>
                 </div>
               </section>
