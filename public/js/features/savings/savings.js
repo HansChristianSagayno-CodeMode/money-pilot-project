@@ -50,6 +50,19 @@ function renderSavings() {
     const goal = planner.mainGoal || 0;
 
     const items = planner.items || [];
+    //--------------------------------------------------
+// Update Items Counter
+//--------------------------------------------------
+
+const itemsHeader = document.getElementById("planner-items-header");
+
+if (itemsHeader) {
+    const totalItems = items.length;
+    const maxItems = 3; // keep your current limit
+
+    itemsHeader.innerText =
+        `Items to Buy ${totalItems} / ${maxItems} Items`;
+}
 
     const totalCost =
         items.reduce((sum, item) => sum + item.cost, 0);
@@ -103,25 +116,24 @@ function renderSavings() {
     if (container) {
 
         container.innerHTML =
-            items.map(item => `
-
-                <div class="planner-list-item">
-
-                    <div>
-
-                        <div style="font-weight:600;">
-                            ${item.name}
-                        </div>
-
-                        <div style="font-size:0.8rem;">
-                            ₱${item.cost.toLocaleString()}
-                        </div>
-
-                    </div>
-
-                </div>
-
-            `).join("");
+        items.map(item => `
+            <div class="planner-list-item">
+    
+                <input 
+                    value="${item.name}" 
+                    onchange="window.updatePlannerItem(${item.id}, 'name', this.value)"
+                    style="font-weight:600; border:none; background:transparent;"
+                />
+    
+                <input 
+                    type="number"
+                    value="${item.cost}" 
+                    onchange="window.updatePlannerItem(${item.id}, 'cost', this.value)"
+                    style="font-size:0.8rem; border:none; background:transparent;"
+                />
+    
+            </div>
+        `).join("");
 
     }
 
@@ -191,6 +203,8 @@ function renderSavings() {
 
 
 
+
+
 //--------------------------------------------------
 // INIT
 //--------------------------------------------------
@@ -239,3 +253,52 @@ function setupPlannerListeners() {
     });
 
 }
+
+//--------------------------------------------------
+// ADD PLANNER ITEM
+//--------------------------------------------------
+
+function addPlannerItem(name, cost) {
+
+    if (!name || !cost) return;
+
+    if (!window.appData.planner) return;
+
+    // 🔒 LIMIT TO 3 ITEMS
+    if (window.appData.planner.items.length >= 3) return;
+
+    const newItem = {
+        id: Date.now(),
+        name: name,
+        cost: Number(cost)
+    };
+
+    window.appData.planner.items.push(newItem);
+
+    renderSavings();
+}
+
+// Expose globally for React button
+window.addPlannerItem = addPlannerItem;
+
+
+function updatePlannerItem(id, field, value) {
+
+    const planner = window.appData.planner;
+    if (!planner) return;
+
+    const item = planner.items.find(i => i.id === id);
+    if (!item) return;
+
+    if (field === "name") {
+        item.name = value;
+    }
+
+    if (field === "cost") {
+        item.cost = Number(value);
+    }
+
+    renderSavings();
+}
+
+window.updatePlannerItem = updatePlannerItem;

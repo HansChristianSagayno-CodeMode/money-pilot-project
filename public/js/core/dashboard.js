@@ -82,6 +82,11 @@ const dashInitLoop = setInterval(() => {
         if(dateInput) dateInput.value = today;
         window.updateCategories();
         window.renderStats();
+        // Hide floating plus icon as requested
+const fabMain = document.getElementById('fabMain');
+if (fabMain) {
+    fabMain.style.display = 'none';
+}
     }
 }, 50);
 
@@ -320,11 +325,14 @@ function drawTrendChart() {
     let minVal = minData - buffer;
     if (minData >= 0 && minVal < 0) minVal = 0;
 
-    const points = timeline.map((t, i) => ({
-        x: padding.left + (i / (timeline.length - 1)) * width,
-        y: padding.top + height - ((t.balance - minVal) / (maxVal - minVal)) * height,
-        data: t
-    }));
+  // FIXED 12 MONTH SPACING
+const stepX = width / 11;
+
+const points = timeline.map((t, i) => ({
+    x: padding.left + i * stepX,
+    y: padding.top + height - ((t.balance - minVal) / (maxVal - minVal)) * height,
+    data: t
+}));
 
     chartState = { points, layout: { padding, width, height, rect, minVal, maxVal }, ctx, cvs };
 
@@ -340,24 +348,78 @@ function drawTrendChart() {
 }
 
 function prepareChartData() {
-    let timeline = [];
-    if(window.appData.records) {
-        window.appData.records.forEach(r => timeline.push({
-            date: new Date(r.date), amount: r.type === 'income' ? r.amount : -r.amount, type: r.type, name: r.desc || r.category
-        }));
-    }
-    if(window.appData.debts) {
-        window.appData.debts.forEach(d => timeline.push({ date: new Date(d.date), amount: -d.amount, type: 'debt', name: d.name }));
-    }
-    if(window.appData.goals) {
-        window.appData.goals.forEach(g => timeline.push({ date: new Date(g.date), amount: -g.target, type: 'goal', name: g.name }));
-    }
-    if(window.appData.planner && window.appData.planner.items) {
-        window.appData.planner.items.forEach(i => timeline.push({ date: new Date(), amount: -i.cost, type: 'planner', name: i.name }));
+    const currentYear = new Date().getFullYear();
+    const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    // 1. Initialize exactly 12 fixed months with updated category trackers (No income)
+    let timeline = Array.from({ length: 12 }, (_, i) => ({
+        monthLabel: MONTH_LABELS[i],
+        amount: 0,
+        expense: 0,
+        debt: 0,
+        goal: 0,
+        planner: 0,
+        type: 'balance', 
+        name: `${MONTH_LABELS[i]} ${currentYear}`
+    }));
+
+    // 2. Aggregate actual data into respective categories
+    if (window.appData.records) {
+        window.appData.records.forEach(r => {
+            const d = new Date(r.date);
+            if (d.getFullYear() === currentYear) {
+                const monthIndex = d.getMonth();
+                if (r.type === 'income') {
+                    // Add to amount ONLY, do not track separately
+                    timeline[monthIndex].amount += r.amount;
+                } else if (r.type === 'expense') {
+                    timeline[monthIndex].expense += r.amount;
+                    timeline[monthIndex].amount -= r.amount;
+                }
+            }
+        });
     }
 
-    timeline.sort((a, b) => a.date - b.date);
+    if (window.appData.debts) {
+        window.appData.debts.forEach(d => {
+            // Correct property detection (includes due_date)
+            const rawDate = d.date || d.dueDate || d.due_date;
+            if (!rawDate) return;
+    
+            const dt = new Date(rawDate);
+            if (dt.getFullYear() === currentYear) {
+                const monthIndex = dt.getMonth();
+    
+                timeline[monthIndex].debt += Number(d.amount);
+                timeline[monthIndex].expense += Number(d.amount);
+                timeline[monthIndex].amount -= Number(d.amount);
+            }
+        });
+    }
 
+    if (window.appData.goals) {
+        window.appData.goals.forEach(g => {
+            const dt = new Date(g.date);
+            if (dt.getFullYear() === currentYear) {
+                timeline[dt.getMonth()].goal += g.target;
+                timeline[dt.getMonth()].expense += g.target; // Add to total expense
+                timeline[dt.getMonth()].amount -= g.target;
+            }
+        });
+    }
+
+    if (window.appData.planner && window.appData.planner.items) {
+        window.appData.planner.items.forEach(p => {
+            const dt = new Date(); // planner applies to current month
+            if (dt.getFullYear() === currentYear) {
+                timeline[dt.getMonth()].planner += p.cost;
+                timeline[dt.getMonth()].expense += p.cost; // Add to total expense
+                timeline[dt.getMonth()].amount -= p.cost;
+            }
+        });
+    }
+
+    // 3. Calculate running cumulative balance
     let runningBalance = 0;
     return timeline.map(item => {
         runningBalance += item.amount;
@@ -386,12 +448,16 @@ function drawGridAndAxes(ctx, layout, timeline) {
     const count = timeline.length;
     const maxLabels = Math.floor(width / 60); 
     const skip = Math.ceil(count / maxLabels);
-    timeline.forEach((item, i) => {
-        if (i % skip === 0 || i === count - 1) {
-            const x = padding.left + (i / (count - 1)) * width;
-            ctx.fillText(item.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, padding.top + height + 25);
-        }
-    });
+
+    ctx.textAlign = "center";
+ctx.fillStyle = "#94A3B8";
+
+const stepX = width / 11;
+
+timeline.forEach((item, i) => {
+    const x = padding.left + i * stepX;
+    ctx.fillText(item.monthLabel, x, padding.top + height + 25);
+});
 }
 
 function drawSmoothLine(ctx, points, layout) {
@@ -445,30 +511,69 @@ function handleChartHover(e) {
         const { x, y, data } = closest;
         const { padding, height } = layout;
 
+        // Guide Line
         ctx.beginPath(); ctx.moveTo(x, padding.top); ctx.lineTo(x, padding.top + height);
         ctx.strokeStyle = "#CBD5E1"; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
 
-        const boxW = 160; const boxH = 90; const pad = 12;
-        let tx = x + 15; if (tx + boxW > cvs.width) tx = x - boxW - 15;
-        let ty = y - 45; if (ty < 10) ty = 10;
+        // Adjusted box height since Income is removed (from 145 down to 128)
+        const boxW = 160; 
+        const boxH = 128; 
+        const pad = 12;
+        
+        // Prevent tooltip clipping
+        let tx = x + 15; 
+        let ty = y - boxH - 15;
 
+        if (tx + boxW > rect.width) {
+            tx = x - boxW - 15;
+        }
+        if (tx < 0) {
+            tx = 10;
+        }
+        if (ty < 0) {
+            ty = y + 15;
+        }
+
+        // Draw Shadow & Box
         ctx.shadowColor = "rgba(0,0,0,0.15)"; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
         ctx.fillStyle = "#1E293B"; ctx.beginPath(); ctx.roundRect(tx, ty, boxW, boxH, 8); ctx.fill();
         ctx.shadowColor = "transparent";
 
-        ctx.textAlign = "left"; ctx.fillStyle = "#94A3B8"; ctx.font = "500 10px 'Plus Jakarta Sans', sans-serif";
-        ctx.fillText(data.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), tx + pad, ty + 20);
+        // Draw Header (e.g., "Nov 2026")
+        ctx.textAlign = "left"; 
+        ctx.font = "600 12px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText(data.name, tx + pad, ty + 22);
 
-        ctx.fillStyle = "#FFFFFF"; ctx.font = "600 12px 'Plus Jakarta Sans', sans-serif";
-        ctx.fillText(data.name.length > 18 ? data.name.substring(0, 16) + '...' : data.name, tx + pad, ty + 38);
+        // Helper to draw row with colored dot
+        const drawRow = (label, value, color, yPos) => {
+            ctx.beginPath();
+            ctx.arc(tx + pad + 4, ty + yPos - 4, 3, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            
+            ctx.fillStyle = "#E2E8F0"; 
+            ctx.font = "500 11px 'Plus Jakarta Sans', sans-serif";
+            ctx.fillText(`${label}: ${formatPHP(value)}`, tx + pad + 14, ty + yPos);
+        };
 
-        const config = chartConfig.find(c => c.key === data.type) || {};
-        ctx.fillStyle = config.color || '#fff'; ctx.font = "500 11px 'Plus Jakarta Sans', sans-serif";
-        ctx.fillText(`${data.type.charAt(0).toUpperCase() + data.type.slice(1)}: ${formatPHP(Math.abs(data.amount))}`, tx + pad, ty + 56);
+        // Draw Category Breakdown (Income Removed)
+        drawRow("Expense", data.expense, "#94A3B8", 42); // Neutral color
+        drawRow("Debt", data.debt, "#7F1D1D", 58);
+        drawRow("Goal", data.goal, "#8B5CF6", 74);
+        drawRow("Planner", data.planner, "#F97316", 90);
 
-        ctx.fillStyle = "#FFFFFF"; ctx.fillText(`Bal: ${formatPHP(data.balance)}`, tx + pad, ty + 74);
-        
-        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fillStyle = "#FFFFFF"; ctx.fill();
-        ctx.strokeStyle = config.color || 'var(--primary)'; ctx.lineWidth = 2; ctx.stroke();
+        // Divider Line
+        ctx.beginPath();
+        ctx.moveTo(tx + pad, ty + 102);
+        ctx.lineTo(tx + boxW - pad, ty + 102);
+        ctx.strokeStyle = "#334155";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Final Balance
+        ctx.font = "700 12px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText(`Bal: ${formatPHP(data.balance)}`, tx + pad, ty + 118);
     }
 }

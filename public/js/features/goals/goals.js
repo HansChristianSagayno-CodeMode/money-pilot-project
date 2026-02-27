@@ -107,6 +107,15 @@ function renderGoals() {
     container.innerHTML = window.appData.goals.map(g => {
         const pct = g.target > 0 ? Math.min(100, (savings / g.target) * 100) : 0;
         
+        // Safely format the date if it exists
+        const formattedDate = g.date 
+            ? new Date(g.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })
+            : null;
+        
         return `
             <div class="card" style="padding: 1.5rem;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:15px; width:100%;">
@@ -117,7 +126,10 @@ function renderGoals() {
 
                     <div style="flex:1;">
                         <div style="font-weight:700; font-size:1rem;">${g.name}</div>
+                        
                         <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Target: ${formatPHP(g.target)}</div>
+                        
+                        ${formattedDate ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Due: ${formattedDate}</div>` : ''}
                         
                         <div style="margin-top:10px; height:8px; background:var(--bg-body); border-radius:10px; overflow:hidden;">
                             <div style="height:100%; width:${pct}%; background:var(--success); border-radius:10px;"></div>
@@ -134,7 +146,6 @@ function renderGoals() {
         `;
     }).join('');
 }
-
 
 
 async function addGoal(e) {
