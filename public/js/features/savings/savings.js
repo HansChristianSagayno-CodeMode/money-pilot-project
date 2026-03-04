@@ -1,45 +1,50 @@
-//--------------------------------------------------
-// INIT PLANNER STATE
-//--------------------------------------------------
+
+function calculateTotals() {
+
+    const planner = window.appData.planner;
+
+    const goal = Number(planner.mainGoal) || 0;
+
+    const allocated =
+        planner.items.reduce(
+            (sum, item) => sum + (Number(item.cost) || 0),
+            0
+        );
+
+    planner.allocated = allocated;
+
+    planner.percentage =
+        goal > 0 ? (allocated / goal) * 100 : 0;
+
+}
+
+function recalculateSavings() {
+    calculateTotals();
+    renderSavings();
+}
 
 
 
-
-//--------------------------------------------------
-// LOAD SAVINGS (temporary in-memory integration)
-//--------------------------------------------------
 
 async function loadSavings() {
 
-    if (!window.appData.savings || window.appData.savings.length === 0) {
-
-        window.appData.savings = [
-            { id: 1, name: "Standing Desk", cost: 15000 }
-        ];
-
-    }
-
     if (!window.appData.planner) {
-
         window.appData.planner = {
             mainGoal: 50000,
             period: "Monthly",
             items: []
         };
-
     }
 
-    window.appData.planner.mainGoal =
-        window.appData.planner.mainGoal || 50000;
+    await loadItems(); 
 
-    window.appData.planner.items = window.appData.savings;
-
-    renderSavings();
 }
 
-//--------------------------------------------------
-// RENDER (ORIGINAL WORKING LOGIC)
-//--------------------------------------------------
+  
+
+
+
+
 
 function renderSavings() {
 
@@ -50,9 +55,7 @@ function renderSavings() {
     const goal = planner.mainGoal || 0;
 
     const items = planner.items || [];
-    //--------------------------------------------------
-// Update Items Counter
-//--------------------------------------------------
+
 
 const itemsHeader = document.getElementById("planner-items-header");
 
@@ -65,12 +68,10 @@ if (itemsHeader) {
 }
 
     const totalCost =
-        items.reduce((sum, item) => sum + item.cost, 0);
+    items.reduce((sum, item) => sum + Number(item.cost || 0), 0);
 
 
-    //--------------------------------------------------
-    // Goal input
-    //--------------------------------------------------
+
 
     const goalInput =
         document.getElementById("planner-main-goal");
@@ -81,11 +82,6 @@ if (itemsHeader) {
         goalInput.value = goal;
 
     }
-
-
-    //--------------------------------------------------
-    // Required contribution
-    //--------------------------------------------------
 
     let divisor =
         planner.period === "Daily" ? 365 :
@@ -106,9 +102,6 @@ if (itemsHeader) {
     }
 
 
-    //--------------------------------------------------
-    // Items list
-    //--------------------------------------------------
 
     const container =
         document.getElementById("planner-items-list");
@@ -120,17 +113,19 @@ if (itemsHeader) {
             <div class="planner-list-item">
     
                 <input 
-                    value="${item.name}" 
-                    onchange="window.updatePlannerItem(${item.id}, 'name', this.value)"
-                    style="font-weight:600; border:none; background:transparent;"
-                />
+    value="${item.name}" 
+    data-id="${item.id}"
+    data-field="name"
+    class="planner-input"
+/>
     
-                <input 
-                    type="number"
-                    value="${item.cost}" 
-                    onchange="window.updatePlannerItem(${item.id}, 'cost', this.value)"
-                    style="font-size:0.8rem; border:none; background:transparent;"
-                />
+               <input 
+    type="number"
+    value="${item.cost}" 
+    data-id="${item.id}"
+    data-field="cost"
+    class="planner-input"
+/>
     
             </div>
         `).join("");
@@ -138,9 +133,7 @@ if (itemsHeader) {
     }
 
 
-    //--------------------------------------------------
-    // Donut graph
-    //--------------------------------------------------
+
 
     const pct =
         goal > 0
@@ -174,9 +167,6 @@ if (itemsHeader) {
             Math.round(pct) + "%";
 
 
-    //--------------------------------------------------
-    // Stats
-    //--------------------------------------------------
 
     const totalGoal =
         document.getElementById("donut-total-goal");
@@ -195,9 +185,25 @@ if (itemsHeader) {
         allocated.innerText =
             "₱" + totalCost.toLocaleString();
 
-    if (combined)
-        combined.innerText =
-            "₱" + (goal + totalCost).toLocaleString();
+            if (combined)
+                combined.innerText =
+                    "₱" + (goal + totalCost).toLocaleString();
+            
+            
+            // Attach listeners after rendering
+            document.querySelectorAll(".planner-input").forEach(input => {
+
+                input.onchange = (e) => {
+            
+                    const id = e.target.dataset.id; // ← FIXED
+                    const field = e.target.dataset.field;
+                    const value = e.target.value;
+            
+                    window.updatePlannerItem(id, field, value);
+            
+                };
+            
+            });
 
 }
 
@@ -240,8 +246,8 @@ function setupPlannerListeners() {
 
         window.appData.planner.mainGoal =
             parseFloat(goalInput.value) || 0;
-
-        renderSavings();
+    
+        recalculateSavings();
     });
 
     periodInput.addEventListener("change", () => {
@@ -258,47 +264,115 @@ function setupPlannerListeners() {
 // ADD PLANNER ITEM
 //--------------------------------------------------
 
-function addPlannerItem(name, cost) {
+async function addPlannerItem(name, cost) {
+    const numericCost = Number(cost);
 
-    if (!name || !cost) return;
+    if (!name || !numericCost || numericCost <= 0) return;
 
-    if (!window.appData.planner) return;
+    const { data, error } = await window.supabase
+        .from("savings_items")
+        .insert([
+            {
+                name: name.trim(),
+                cost: numericCost
+            }
+        ])
+        .select();
 
-    // 🔒 LIMIT TO 3 ITEMS
-    if (window.appData.planner.items.length >= 3) return;
+    if (error) {
+        console.error("Add Savings Item Error:", error);
+        return;
+    }
 
-    const newItem = {
-        id: Date.now(),
-        name: name,
-        cost: Number(cost)
-    };
+    // Push returned row into global state
+    window.appData.planner.items.push(data[0]);
 
-    window.appData.planner.items.push(newItem);
-
-    renderSavings();
+    recalculateSavings();
 }
 
 // Expose globally for React button
 window.addPlannerItem = addPlannerItem;
 
+async function updatePlannerItem(id, field, value) {
 
-function updatePlannerItem(id, field, value) {
-
-    const planner = window.appData.planner;
-    if (!planner) return;
-
-    const item = planner.items.find(i => i.id === id);
-    if (!item) return;
+    const updateData = {};
 
     if (field === "name") {
-        item.name = value;
+        updateData.name = value.trim();
     }
 
     if (field === "cost") {
-        item.cost = Number(value);
+        updateData.cost = Number(value) || 0;
+    }
+    console.log("Updating item:", id, field, value);
+
+    const { data, error } = await window.supabase
+        .from("savings_items")
+        .update(updateData)
+        .eq("id", id)
+        .select();
+
+    if (error) {
+        console.error("Update Savings Item Error:", JSON.stringify(error, null, 2));
+        return;
     }
 
-    renderSavings();
+    const index =
+        window.appData.planner.items.findIndex(i => i.id === id);
+
+    if (index !== -1) {
+        window.appData.planner.items[index] = data[0];
+    }
+
+    recalculateSavings();
 }
 
+
+
+
+
 window.updatePlannerItem = updatePlannerItem;
+
+async function loadItems() {
+    const { data, error } = await window.supabase
+        .from("savings_items")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+    if (error) {
+        console.error("Load Savings Items Error:", error);
+        return;
+    }
+
+    window.appData.planner.items = data || [];
+
+    recalculateSavings();
+}
+
+async function deletePlannerItem(id) {
+    const { error } = await window.supabase
+        .from("savings_items")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        console.error("Delete Savings Item Error:", error);
+        return;
+    }
+
+    // Remove locally
+    window.appData.planner.items =
+        window.appData.planner.items.filter(item => item.id !== id);
+
+        recalculateSavings();
+}
+
+
+
+
+
+
+
+
+
+
