@@ -1,0 +1,73 @@
+.login-page{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#F3F4F6;
+    font-family:'Plus Jakarta Sans',sans-serif;
+    }
+    
+    .login-card{
+    background:#ffffff;
+    padding:45px;
+    border-radius:18px;
+    box-shadow:0 20px 30px rgba(0,0,0,0.08);
+    width:380px;
+    }
+    
+    .login-title{
+    font-size:1.6rem;
+    font-weight:700;
+    margin-bottom:25px;
+    color:#059669;
+    text-align:center;
+    }
+    
+    /* INPUT FIELDS */
+    .login-input{
+    width:100%;
+    padding:14px;
+    border:1.5px solid #D1D5DB;
+    border-radius:10px;
+    margin-bottom:18px;
+    font-size:0.95rem;
+    color:#1F2937; /* DARK TEXT */
+    background:#FFFFFF;
+    transition:0.2s;
+    }
+    
+    .login-input::placeholder{
+    color:#6B7280; /* darker placeholder */
+    }
+    
+    .login-input:focus{
+    outline:none;
+    border-color:#10B981;
+    box-shadow:0 0 0 3px rgba(16,185,129,0.15);
+    }
+    
+    /* BUTTON */
+    .login-btn{
+    width:100%;
+    padding:14px;
+    background:#10B981;
+    border:none;
+    border-radius:10px;
+    color:white;
+    font-weight:600;
+    font-size:1rem;
+    cursor:pointer;
+    transition:0.2s;
+    }
+    
+    .login-btn:hover{
+    background:#059669;
+    }
+    
+    /* ERROR MESSAGE */
+    .login-error{
+    color:#DC2626;
+    margin-top:10px;
+    font-size:0.9rem;
+    text-align:center;
+    }

@@ -9,7 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.97.0",
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.99.1",
     "next": "^16.1.6",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
