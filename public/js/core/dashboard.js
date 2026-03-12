@@ -1,33 +1,41 @@
+// Prevent script from running twice
+if (!window.navItemsInitialized) {
 
+    window.navItemsInitialized = true;
 
-const navItems = document.querySelectorAll(".nav__item");
-const tabs = document.querySelectorAll(".tab");
-const pageTitle = document.querySelector(".page-title");
+    var navItems = document.querySelectorAll(".nav__item");
+    var tabs = document.querySelectorAll(".tab");
+    var pageTitle = document.querySelector(".page-title");
 
-navItems.forEach(item => {
+    navItems.forEach(item => {
 
-    item.addEventListener("click", e => {
+        item.addEventListener("click", function(e) {
 
-        e.preventDefault();
+            e.preventDefault();
 
-        const target = item.dataset.tab;
+            const target = item.dataset.tab;
 
-        navItems.forEach(i => i.classList.remove("active"));
-        tabs.forEach(t => t.classList.remove("active"));
+            navItems.forEach(i => i.classList.remove("active"));
+            tabs.forEach(t => t.classList.remove("active"));
 
-        item.classList.add("active");
+            item.classList.add("active");
 
-        const tab = document.getElementById(target);
+            const tab = document.getElementById(target);
 
-        if (tab) {
-            tab.classList.add("active");
-        }
+            if (tab) {
+                tab.classList.add("active");
+            }
 
-        pageTitle.textContent = item.textContent;
+            if (pageTitle) {
+                pageTitle.textContent = item.textContent;
+            }
+
+        });
 
     });
 
-});
+}
+
 
 // Ensure global state exists to prevent crashes
 window.appData = window.appData || {};
@@ -43,11 +51,11 @@ if (!window.appData.records || window.appData.records.length === 0) {
     ];
 }
 
-const expenseCats = ['Food', 'Transport', 'Utilities', 'Shopping', 'Health', 'Education', 'Entertainment'];
-const incomeCats = ['Salary', 'Freelance', 'Business', 'Investment', 'Gift'];
+var expenseCats = ['Food', 'Transport', 'Utilities', 'Shopping', 'Health', 'Education', 'Entertainment'];
+var incomeCats = ['Salary', 'Freelance', 'Business', 'Investment', 'Gift'];
 
-let chartState = { points: [], layout: {}, ctx: null, cvs: null, data: [] };
-const chartConfig = [
+var chartState = { points: [], layout: {}, ctx: null, cvs: null, data: [] };
+var chartConfig = [
     { key: 'balance', label: 'Balance', color: '#10B981', type: 'line' },
     { key: 'income', label: 'Income', color: '#10B981', type: 'dot' },
     { key: 'expense', label: 'Expense', color: '#EF4444', type: 'dot' },
@@ -74,7 +82,7 @@ function getIcon(cat) {
 }
 
 // Global hook execution loop (Runs after scripts are loaded)
-const dashInitLoop = setInterval(() => {
+var dashInitLoop = setInterval(() => {
     if (window.appData) {
         clearInterval(dashInitLoop);
         const today = new Date().toISOString().split('T')[0];
@@ -113,7 +121,7 @@ window.toggleFab = function() {
     if(main) main.classList.toggle('active');
 };
 
-const originalOpenModal = window.openModal;
+var originalOpenModal = window.openModal;
 window.openModal = function(id, type) {
     if(type && id === 'recordModal') { 
         document.getElementById('recType').value = type; 
