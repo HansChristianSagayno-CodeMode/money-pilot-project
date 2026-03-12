@@ -38,7 +38,7 @@
 
     .chart-wrapper{
         width:100%;
-        overflow:hidden;
+        height:auto;
         }
         
         canvas{
@@ -84,3 +84,36 @@
         }
         
         }
+
+        /* FIX DASHBOARD WIDTH */
+
+.app-layout{
+    display:flex;
+    min-height:100vh;
+    }
+    
+    .sidebar{
+    width:250px;
+    flex-shrink:0;
+    }
+    
+    .main{
+    flex:1;
+    width:100%;
+    }
+
+    .main__content{
+        width:100%;
+        max-width:none;
+        }
+
+        .card{
+            width:100%;
+            max-width:100%;
+            }
+
+            /* Fix single dashboard card width */
+
+#dashboard .card{
+    grid-column: 1 / -1;
+    }
