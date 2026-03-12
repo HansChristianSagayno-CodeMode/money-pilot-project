@@ -1,3 +1,8 @@
+img{
+    max-width:100%;
+    height:auto;
+    }
+
 :root {
     --primary: #10B981;
     --primary-dark: #059669;
@@ -23,15 +28,15 @@
     /* NAVBAR */
     
     .navbar{
-    height:var(--nav-height);
-    background:rgba(255,255,255,0.95);
-    backdrop-filter:blur(10px);
-    position:fixed;
-    top:0;
-    width:100%;
-    border-bottom:1px solid #E5E7EB;
-    z-index:1000;
-    }
+        height:var(--nav-height);
+        background:rgba(255,255,255,0.95);
+        backdrop-filter:blur(10px);
+        position:fixed;
+        top:0;
+        width:100%;
+        z-index:1000;
+        border-bottom:1px solid #E5E7EB;
+        }
     
     .nav-container{
     max-width:var(--max-width);
@@ -69,12 +74,12 @@
     /* BUTTONS */
     
     .btn{
-    padding:10px 24px;
-    border-radius:50px;
-    font-weight:600;
-    cursor:pointer;
-    transition:0.2s;
-    }
+        padding:12px 26px;
+        border-radius:50px;
+        font-weight:600;
+        cursor:pointer;
+        font-size:16px;
+        }
     
     .btn-primary{
     background:var(--primary);
@@ -306,3 +311,34 @@
     
     }
     
+
+    /* ================= MOBILE RESPONSIVE ================= */
+
+
+    /* MOBILE NAVBAR */
+@media (max-width: 768px){
+
+    .navbar{
+    height:auto;
+    padding:12px 20px;
+    }
+    
+    .nav-container{
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+    }
+    
+    .nav-links{
+    display:none; /* hide links on small screens */
+    }
+    
+    .btn{
+    margin-top:5px;
+    }
+    
+    }
+
+    section{
+        padding:60px 20px;
+        }

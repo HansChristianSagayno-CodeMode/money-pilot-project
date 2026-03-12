@@ -1,8 +1,10 @@
 "use client";
 
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import AIChatbot from "../components/AIChatbot";
+import "./dashboard.css"
 
 export default function Home() {
 
